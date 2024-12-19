@@ -63,11 +63,11 @@ function App() {
   }
 
   // REACT ENSURES TO NOT CREATE THIS FUNCTION AGAIN USING USECALLBACK HOOK
-function handleRemovePlace() {
+  const handleRemovePlace = useCallback(function handleRemovePlace() {
     setPickedPlaces((prevPickedPlaces) =>
       prevPickedPlaces.filter((place) => place.id !== selectedPlace.current)
     );
-    // setModalIsOpen(false);
+    setModalIsOpen(false);
 
     const selectedPlaceIds =
       JSON.parse(localStorage.getItem("selectedPlaces")) || [];
@@ -77,7 +77,7 @@ function handleRemovePlace() {
         selectedPlaceIds.filter((id) => id != selectedPlace.current)
       )
     );
-  };
+  }, []);
 
   return (
     <>
