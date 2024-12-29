@@ -1,37 +1,38 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 
 import Places from "./components/Places.jsx";
-import { AVAILABLE_PLACES } from "./data.js";
 import Modal from "./components/Modal.jsx";
 import DeleteConfirmation from "./components/DeleteConfirmation.jsx";
 import logoImg from "./assets/logo.png";
 import { sortPlacesByDistance } from "./loc.js";
+import AvailablePlaces from "./components/AvailablePlaces.jsx";
 
+// -->Using Local data.js file Implementation
 // PLACE ARRAY LOADS INSTANTLY, NEEDED ONLY ONCE AT START, SO WE CAN GET ARRAY AND INITIALISE PICKEDPLACES ARRAY WITH THIS ARRAY
-const selectedIdsInLocalStorage =
-    JSON.parse(localStorage.getItem("selectedPlaces")) || [];
-  const storedPlaces = selectedIdsInLocalStorage.map((id) =>
-    AVAILABLE_PLACES.find((place) => place.id === id)
-  );
+// const selectedIdsInLocalStorage =
+//     JSON.parse(localStorage.getItem("selectedPlaces")) || [];
+//   const storedPlaces = selectedIdsInLocalStorage.map((id) =>
+//     AVAILABLE_PLACES.find((place) => place.id === id)
+//   );
 
 function App() {
-  console.log(storedPlaces);
   const selectedPlace = useRef();
-  const [pickedPlaces, setPickedPlaces] = useState(storedPlaces);
-  const [availablePlaces, setAvailablePlaces] = useState([]);
+  const [pickedPlaces, setPickedPlaces] = useState([]);
+  // const [availablePlaces, setAvailablePlaces] = useState([]);
   const [modalIsOpen, setModalIsOpen] = useState(false);
 
+  // --> Using Local data.js file Implementation
   // USEEFFET WITH DEPENDANCY EMPTY ARRAY: FOR SORTING PLACES ON THE BASIS OF LOCATION
-  useEffect(() => {
-    navigator.geolocation.getCurrentPosition((position) => {
-      const sortedPlaces = sortPlacesByDistance(
-        AVAILABLE_PLACES,
-        position.coords.latitude,
-        position.coords.longitude
-      );
-      setAvailablePlaces(sortedPlaces);
-    });
-  }, []);
+  // useEffect(() => {
+  //   navigator.geolocation.getCurrentPosition((position) => {
+  //     const sortedPlaces = sortPlacesByDistance(
+  //       AVAILABLE_PLACES,
+  //       position.coords.latitude,
+  //       position.coords.longitude
+  //     );
+  //     setAvailablePlaces(sortedPlaces);
+  //   });
+  // }, []);
 
   function handleStartRemovePlace(id) {
     setModalIsOpen(true);
@@ -42,42 +43,63 @@ function App() {
     setModalIsOpen(false);
   }
 
-  function handleSelectPlace(id) {
+  function handleSelectPlace(selectedPlace) {
     setPickedPlaces((prevPickedPlaces) => {
-      if (prevPickedPlaces.some((place) => place.id === id)) {
+      if (!prevPickedPlaces) {
+        prevPickedPlaces = [];
+      }
+      if (prevPickedPlaces.some((place) => place.id === selectedPlace.id)) {
         return prevPickedPlaces;
       }
-      const place = AVAILABLE_PLACES.find((place) => place.id === id);
-      return [place, ...prevPickedPlaces];
+      return [selectedPlace, ...prevPickedPlaces];
     });
-
-    // LOCAL STORAGE: STORE IDS OF SELECTED PLACES ON THE BROWSER STORAGE
-    const selectedPlaceIds =
-      JSON.parse(localStorage.getItem("selectedPlaces")) || [];
-    if (selectedPlaceIds.indexOf(id) === -1) {
-      localStorage.setItem(
-        "selectedPlaces",
-        JSON.stringify([id, ...selectedPlaceIds])
-      );
-    }
   }
 
-  // REACT ENSURES TO NOT CREATE THIS FUNCTION AGAIN USING USECALLBACK HOOK
   const handleRemovePlace = useCallback(function handleRemovePlace() {
-    setPickedPlaces((prevPickedPlaces) =>
-      prevPickedPlaces.filter((place) => place.id !== selectedPlace.current)
+    setUserPlaces((prevPickedPlaces) =>
+      prevPickedPlaces.filter((place) => place.id !== selectedPlace.current.id)
     );
-    setModalIsOpen(false);
 
-    const selectedPlaceIds =
-      JSON.parse(localStorage.getItem("selectedPlaces")) || [];
-    localStorage.setItem(
-      "selectedPlaces",
-      JSON.stringify(
-        selectedPlaceIds.filter((id) => id != selectedPlace.current)
-      )
-    );
+    setModalIsOpen(false);
   }, []);
+
+  // --> Using Local data.js file Implementation
+  // function handleSelectPlace(id) {
+  //   setPickedPlaces((prevPickedPlaces) => {
+  //     if (prevPickedPlaces.some((place) => place.id === id)) {
+  //       return prevPickedPlaces;
+  //     }
+  //     const place = AVAILABLE_PLACES.find((place) => place.id === id);
+  //     return [place, ...prevPickedPlaces];
+  //   });
+
+    // LOCAL STORAGE: STORE IDS OF SELECTED PLACES ON THE BROWSER STORAGE
+  //   const selectedPlaceIds =
+  //     JSON.parse(localStorage.getItem("selectedPlaces")) || [];
+  //   if (selectedPlaceIds.indexOf(id) === -1) {
+  //     localStorage.setItem(
+  //       "selectedPlaces",
+  //       JSON.stringify([id, ...selectedPlaceIds])
+  //     );
+  //   }
+  // }
+
+  // REACT ENSURES TO NOT CREATE THIS FUNCTION AGAIN USING USECALLBACK HOOK
+  // const handleRemovePlace = useCallback(function handleRemovePlace() {
+  //   setPickedPlaces((prevPickedPlaces) =>
+  //     prevPickedPlaces.filter((place) => place.id !== selectedPlace.current)
+  //   );
+  //   setModalIsOpen(false);
+
+  //   const selectedPlaceIds =
+  //     JSON.parse(localStorage.getItem("selectedPlaces")) || [];
+  //   localStorage.setItem(
+  //     "selectedPlaces",
+  //     JSON.stringify(
+  //       selectedPlaceIds.filter((id) => id != selectedPlace.current)
+  //     )
+  //   );
+  // }, []);
 
   return (
     <>
@@ -103,12 +125,15 @@ function App() {
           places={pickedPlaces}
           onSelectPlace={handleStartRemovePlace}
         />
+        <AvailablePlaces onSelectPlace={handleSelectPlace} />
+
+        {/* Old local data implementation
         <Places
           title="Available Places"
           places={availablePlaces}
           fallbackText="Sorting places by distance..."
           onSelectPlace={handleSelectPlace}
-        />
+        /> */}
       </main>
     </>
   );
