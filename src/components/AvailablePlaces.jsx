@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import Places from "./Places";
 import ErrorScreen from "./ErrorScreen";
+import { sortPlacesByDistance } from "../loc";
+import { fetchAvailablePlaces } from "../http.js";
 
 // ASYNC AWAIT CAN NOT BE USE ON THE COMPONENT FUNCTION, THIS IS A RESTRICTION FROM REACT ITSELF
 export default function AvailablePlaces({ onSelectPlace }) {
@@ -17,26 +19,29 @@ export default function AvailablePlaces({ onSelectPlace }) {
             async function fetchPlaces() {
                 setIsFetching(true);
                 try {
-                    const response = await fetch("http://localhost:3000/places");
-                    const responseData = await response.json();
-                    console.log(responseData);
-    
-                    if(!response.ok) {
-                        throw new Error("Failed to fetch places");
-                    }
-                    setAvailablePlaces(responseData.places);
+                    // Fetching places
+                    const places = await fetchAvailablePlaces();
 
+                    navigator.geolocation.getCurrentPosition((position) => {
+                        const sortedPlaces = sortPlacesByDistance(
+                            places,
+                            position.coords.latitude,
+                            position.coords.longitude)
+
+                            setAvailablePlaces(sortedPlaces);
+                            setIsFetching(false);
+                    });
                 } catch (error) {
                     setError(error);
+                    setIsFetching(false);
                 }
-                setIsFetching(false);
             }
 
             fetchPlaces();
         }, []);
 
         if (error) {
-           return <ErrorScreen title="Error Occured!" message={error.message}/>
+            return <ErrorScreen title="Error Occured!" message={error.message} />
         }
     } else {
         // USING TRADITIONAL WAY OF CALLING API
@@ -55,8 +60,8 @@ export default function AvailablePlaces({ onSelectPlace }) {
         <Places
             title="Available Places"
             places={availablePlaces}
-            isLoading = {isFetching}
-            loadingText = "Data is loading..."
+            isLoading={isFetching}
+            loadingText="Data is loading..."
             fallbackText="No places available..."
             onSelectPlace={onSelectPlace}
         />);
