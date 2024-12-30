@@ -6,6 +6,8 @@ import DeleteConfirmation from "./components/DeleteConfirmation.jsx";
 import logoImg from "./assets/logo.png";
 import { sortPlacesByDistance } from "./loc.js";
 import AvailablePlaces from "./components/AvailablePlaces.jsx";
+import { updateUserPlaces } from "./http.js";
+import ErrorScreen from "./components/ErrorScreen.jsx";
 
 // -->Using Local data.js file Implementation
 // PLACE ARRAY LOADS INSTANTLY, NEEDED ONLY ONCE AT START, SO WE CAN GET ARRAY AND INITIALISE PICKEDPLACES ARRAY WITH THIS ARRAY
@@ -18,10 +20,11 @@ import AvailablePlaces from "./components/AvailablePlaces.jsx";
 function App() {
   const selectedPlace = useRef();
   const [pickedPlaces, setPickedPlaces] = useState([]);
-  // const [availablePlaces, setAvailablePlaces] = useState([]);
   const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [errorUpdatingPlaces, setErrorUpdatingPlaces] = useState();
 
   // --> Using Local data.js file Implementation
+  // const [availablePlaces, setAvailablePlaces] = useState([]);
   // USEEFFET WITH DEPENDANCY EMPTY ARRAY: FOR SORTING PLACES ON THE BASIS OF LOCATION
   // useEffect(() => {
   //   navigator.geolocation.getCurrentPosition((position) => {
@@ -43,7 +46,8 @@ function App() {
     setModalIsOpen(false);
   }
 
-  function handleSelectPlace(selectedPlace) {
+  async function handleSelectPlace(selectedPlace) {
+    // FOR USER EXPERIENCE OPTIMISTINC UPDATE: UPDATE UI FIRST AND THEN API CALL, IF API FAILS RETURNS TO OLD ARRAY IN CATCH BLOCK
     setPickedPlaces((prevPickedPlaces) => {
       if (!prevPickedPlaces) {
         prevPickedPlaces = [];
@@ -53,6 +57,14 @@ function App() {
       }
       return [selectedPlace, ...prevPickedPlaces];
     });
+
+    try {
+      // AT THIS LINE, REACT WILL NOT UPDATE IMIDIATLY THE PICKEDPLACES ARRAY SO BELOW IS THE FIX
+      await updateUserPlaces([selectedPlace, ...pickedPlaces]);
+    } catch (error) {
+      setPickedPlaces(pickedPlaces);
+      setErrorUpdatingPlaces(error);
+    }
   }
 
   const handleRemovePlace = useCallback(function handleRemovePlace() {
@@ -63,6 +75,9 @@ function App() {
     setModalIsOpen(false);
   }, []);
 
+  function handleError() {
+    setErrorUpdatingPlaces(null);
+  }
   // --> Using Local data.js file Implementation
   // function handleSelectPlace(id) {
   //   setPickedPlaces((prevPickedPlaces) => {
@@ -73,7 +88,7 @@ function App() {
   //     return [place, ...prevPickedPlaces];
   //   });
 
-    // LOCAL STORAGE: STORE IDS OF SELECTED PLACES ON THE BROWSER STORAGE
+  // LOCAL STORAGE: STORE IDS OF SELECTED PLACES ON THE BROWSER STORAGE
   //   const selectedPlaceIds =
   //     JSON.parse(localStorage.getItem("selectedPlaces")) || [];
   //   if (selectedPlaceIds.indexOf(id) === -1) {
@@ -103,6 +118,14 @@ function App() {
 
   return (
     <>
+      <Modal open={errorUpdatingPlaces} onClose={handleError}>
+        {errorUpdatingPlaces && (
+          <ErrorScreen
+          title="Error Occured"
+          message={errorUpdatingPlaces.message}
+          onConfirm={handleError}
+        />)}
+      </Modal>
       <Modal open={modalIsOpen} onClose={handleStopRemovePlace}>
         <DeleteConfirmation
           onCancel={handleStopRemovePlace}
