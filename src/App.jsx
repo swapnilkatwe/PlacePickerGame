@@ -4,38 +4,33 @@ import Places from "./components/Places.jsx";
 import Modal from "./components/Modal.jsx";
 import DeleteConfirmation from "./components/DeleteConfirmation.jsx";
 import logoImg from "./assets/logo.png";
-import { sortPlacesByDistance } from "./loc.js";
 import AvailablePlaces from "./components/AvailablePlaces.jsx";
-import { updateUserPlaces } from "./http.js";
+import { fetchUserPickedPlaces, updateUserPlaces } from "./http.js";
 import ErrorScreen from "./components/ErrorScreen.jsx";
-
-// -->Using Local data.js file Implementation
-// PLACE ARRAY LOADS INSTANTLY, NEEDED ONLY ONCE AT START, SO WE CAN GET ARRAY AND INITIALISE PICKEDPLACES ARRAY WITH THIS ARRAY
-// const selectedIdsInLocalStorage =
-//     JSON.parse(localStorage.getItem("selectedPlaces")) || [];
-//   const storedPlaces = selectedIdsInLocalStorage.map((id) =>
-//     AVAILABLE_PLACES.find((place) => place.id === id)
-//   );
 
 function App() {
   const selectedPlace = useRef();
+  const [isFetchingUserPlaces, setIsFetchingUserPlaces] = useState(false);
   const [pickedPlaces, setPickedPlaces] = useState([]);
+  const [errorFetchingUserPlaces, setErrorFetchingUserPlaces] = useState();
+
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [errorUpdatingPlaces, setErrorUpdatingPlaces] = useState();
 
-  // --> Using Local data.js file Implementation
-  // const [availablePlaces, setAvailablePlaces] = useState([]);
-  // USEEFFET WITH DEPENDANCY EMPTY ARRAY: FOR SORTING PLACES ON THE BASIS OF LOCATION
-  // useEffect(() => {
-  //   navigator.geolocation.getCurrentPosition((position) => {
-  //     const sortedPlaces = sortPlacesByDistance(
-  //       AVAILABLE_PLACES,
-  //       position.coords.latitude,
-  //       position.coords.longitude
-  //     );
-  //     setAvailablePlaces(sortedPlaces);
-  //   });
-  // }, []);
+  useEffect(() => {
+    async function fetchingUserPickedPlaces() {
+      setIsFetchingUserPlaces(true);
+      try {
+        const userPickedPlaces = await fetchUserPickedPlaces();
+        setPickedPlaces(userPickedPlaces);
+        setIsFetchingUserPlaces(false);
+      } catch (error) {
+        setErrorFetchingUserPlaces(error);
+        setIsFetchingUserPlaces(false);
+      }
+    }
+    fetchingUserPickedPlaces();
+  },[]); 
 
   function handleStartRemovePlace(id) {
     setModalIsOpen(true);
@@ -67,64 +62,35 @@ function App() {
     }
   }
 
-  const handleRemovePlace = useCallback(function handleRemovePlace() {
-    setUserPlaces((prevPickedPlaces) =>
+  const handleRemovePlace = useCallback(async function handleRemovePlace() {
+    setPickedPlaces((prevPickedPlaces) =>
       prevPickedPlaces.filter((place) => place.id !== selectedPlace.current.id)
     );
 
+    try {
+      await updateUserPlaces(
+        pickedPlaces.filter(place => place.id !== selectedPlace.current.id)
+      );
+    } catch (error) {
+      setPickedPlaces(pickedPlaces);
+      setErrorUpdatingPlaces(error);
+    }
     setModalIsOpen(false);
-  }, []);
+  }, [pickedPlaces]);
 
   function handleError() {
     setErrorUpdatingPlaces(null);
   }
-  // --> Using Local data.js file Implementation
-  // function handleSelectPlace(id) {
-  //   setPickedPlaces((prevPickedPlaces) => {
-  //     if (prevPickedPlaces.some((place) => place.id === id)) {
-  //       return prevPickedPlaces;
-  //     }
-  //     const place = AVAILABLE_PLACES.find((place) => place.id === id);
-  //     return [place, ...prevPickedPlaces];
-  //   });
-
-  // LOCAL STORAGE: STORE IDS OF SELECTED PLACES ON THE BROWSER STORAGE
-  //   const selectedPlaceIds =
-  //     JSON.parse(localStorage.getItem("selectedPlaces")) || [];
-  //   if (selectedPlaceIds.indexOf(id) === -1) {
-  //     localStorage.setItem(
-  //       "selectedPlaces",
-  //       JSON.stringify([id, ...selectedPlaceIds])
-  //     );
-  //   }
-  // }
-
-  // REACT ENSURES TO NOT CREATE THIS FUNCTION AGAIN USING USECALLBACK HOOK
-  // const handleRemovePlace = useCallback(function handleRemovePlace() {
-  //   setPickedPlaces((prevPickedPlaces) =>
-  //     prevPickedPlaces.filter((place) => place.id !== selectedPlace.current)
-  //   );
-  //   setModalIsOpen(false);
-
-  //   const selectedPlaceIds =
-  //     JSON.parse(localStorage.getItem("selectedPlaces")) || [];
-  //   localStorage.setItem(
-  //     "selectedPlaces",
-  //     JSON.stringify(
-  //       selectedPlaceIds.filter((id) => id != selectedPlace.current)
-  //     )
-  //   );
-  // }, []);
 
   return (
     <>
       <Modal open={errorUpdatingPlaces} onClose={handleError}>
         {errorUpdatingPlaces && (
           <ErrorScreen
-          title="Error Occured"
-          message={errorUpdatingPlaces.message}
-          onConfirm={handleError}
-        />)}
+            title="Error Occured"
+            message={errorUpdatingPlaces.message}
+            onConfirm={handleError}
+          />)}
       </Modal>
       <Modal open={modalIsOpen} onClose={handleStopRemovePlace}>
         <DeleteConfirmation
@@ -142,24 +108,23 @@ function App() {
         </p>
       </header>
       <main>
-        <Places
+        {errorFetchingUserPlaces && <ErrorScreen title="Error Occured!" message={errorFetchingUserPlaces.message}/>}
+        {!errorFetchingUserPlaces && <Places
           title="I'd like to visit ..."
-          fallbackText={"Select the places you would like to visit below."}
+          fallbackText="Select the places you would like to visit below."
+          isLoading={isFetchingUserPlaces}
+          loadingText="Data is loading..."
           places={pickedPlaces}
           onSelectPlace={handleStartRemovePlace}
-        />
+        />}
         <AvailablePlaces onSelectPlace={handleSelectPlace} />
-
-        {/* Old local data implementation
-        <Places
-          title="Available Places"
-          places={availablePlaces}
-          fallbackText="Sorting places by distance..."
-          onSelectPlace={handleSelectPlace}
-        /> */}
       </main>
     </>
   );
 }
 
 export default App;
+
+// NOTE: TO GET CODEBASE FOR SHOWING DATA USING LOCAL DATA USING LOCAL data.js file.
+// YOU CAN CHECKOUT USING BELOW COMMIT ID: 832083f
+// COMMIT INFO: Progressbar component with timeInterval and cleanup using useEffect	832083f	Swapnil Katwe <swapnil.katwe111@gmail.com>	19 Dec 2024 at 10:33 PM
