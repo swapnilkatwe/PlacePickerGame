@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useCallback } from "react";
 
 import Places from "./components/Places.jsx";
 import Modal from "./components/Modal.jsx";
@@ -7,30 +7,21 @@ import logoImg from "./assets/logo.png";
 import AvailablePlaces from "./components/AvailablePlaces.jsx";
 import { fetchUserPickedPlaces, updateUserPlaces } from "./http.js";
 import ErrorScreen from "./components/ErrorScreen.jsx";
+import { useFetch } from "./customHooks/useFetch.js";
 
 function App() {
   const selectedPlace = useRef();
-  const [isFetchingUserPlaces, setIsFetchingUserPlaces] = useState(false);
-  const [pickedPlaces, setPickedPlaces] = useState([]);
-  const [errorFetchingUserPlaces, setErrorFetchingUserPlaces] = useState();
 
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [errorUpdatingPlaces, setErrorUpdatingPlaces] = useState();
 
-  useEffect(() => {
-    async function fetchingUserPickedPlaces() {
-      setIsFetchingUserPlaces(true);
-      try {
-        const userPickedPlaces = await fetchUserPickedPlaces();
-        setPickedPlaces(userPickedPlaces);
-        setIsFetchingUserPlaces(false);
-      } catch (error) {
-        setErrorFetchingUserPlaces(error);
-        setIsFetchingUserPlaces(false);
-      }
-    }
-    fetchingUserPickedPlaces();
-  },[]); 
+  // FETCH USER PLACES USING CUSTOM HOOK
+  const {
+    isFetching,
+    fetchedData: pickedPlaces,
+    setFetchedData: setPickedPlaces,
+    error
+  } = useFetch(fetchUserPickedPlaces, []);
 
   function handleStartRemovePlace(id) {
     setModalIsOpen(true);
@@ -76,7 +67,7 @@ function App() {
       setErrorUpdatingPlaces(error);
     }
     setModalIsOpen(false);
-  }, [pickedPlaces]);
+  }, [pickedPlaces, setPickedPlaces]);
 
   function handleError() {
     setErrorUpdatingPlaces(null);
@@ -108,16 +99,18 @@ function App() {
         </p>
       </header>
       <main>
-        {errorFetchingUserPlaces && <ErrorScreen title="Error Occured!" message={errorFetchingUserPlaces.message}/>}
-        {!errorFetchingUserPlaces && <Places
+        {error && <ErrorScreen title="Error Occured!" message={error.message} />}
+        {!error && <Places
           title="I'd like to visit ..."
           fallbackText="Select the places you would like to visit below."
-          isLoading={isFetchingUserPlaces}
+          isLoading={isFetching}
           loadingText="Data is loading..."
           places={pickedPlaces}
           onSelectPlace={handleStartRemovePlace}
         />}
-        <AvailablePlaces onSelectPlace={handleSelectPlace} />
+        <AvailablePlaces
+          onSelectPlace={handleSelectPlace}
+        />
       </main>
     </>
   );
