@@ -1,9 +1,8 @@
 # Place picker game.
 Functionality:
 
-User can pick places you want to go from list of places.
-The user can remove selected places and change his mind in 3 seconds if he doesn't want to, using the Remove Alert with Yes and No options showing for 3 seconds.
-All Places are shown with sort using user's current location.
+Developed a feature allowing users to select destinations from a list of places, with the flexibility to remove selections using a 3-second alert confirmation (Yes/No options).
+Implemented dynamic sorting to display places based on the user's current location, enhancing user convenience and experience.
 
 # Details:
 UI with Reusable React components.
